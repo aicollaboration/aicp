@@ -1,5 +1,7 @@
 import typer
 import os
+from aicp.backend import get_backend_client
+from tabulate import tabulate
 
 
 def search_docker():
@@ -10,6 +12,7 @@ def search_docker():
             return file.read()
 
     return None
+
 
 def search_docker_compose():
     files = os.listdir(os.getcwd())
@@ -23,6 +26,7 @@ def search_docker_compose():
             return file.read()
 
     return None
+
 
 def search_openapi():
     files = os.listdir(os.getcwd())
@@ -41,6 +45,7 @@ def search_openapi():
 
     return None
 
+
 def search_kubernetes():
     search_result = []
     for root, dirs, files in os.walk(os.getcwd()):
@@ -53,11 +58,12 @@ def search_kubernetes():
                             'path': '{}/{}'.format(root, file_path),
                             'content': file_content,
                         })
-    
+
     return search_result
 
 
 def download_github_zipfile_and_extract(name):
+
     typer.echo("Downloading zip file from github...")
     url = "https://github.com/aicollaboration/service-template-python/archive/refs/heads/main.zip"
     os.system("curl -L {} -o {}.zip".format(url, name))
@@ -77,6 +83,7 @@ def download_github_zipfile_and_extract(name):
 
     return name
 
+
 def replace_placeholder_in_file(file_path, placeholder, value):
     with open(file_path, "r") as file:
         file_content = file.read()
@@ -95,11 +102,19 @@ def create_service(name: str):
     download_github_zipfile_and_extract(name)
 
     typer.echo("Replace placeholder...")
-    replace_placeholder_in_file("{}/{}/deployment/manifests/api-ingress.yaml".format('.', name), "<repo>", name)
-    replace_placeholder_in_file("{}/{}/deployment/manifests/deployment.yml".format('.', name), "<repo>", name)
-    replace_placeholder_in_file("{}/{}/deployment/manifests/service.yml".format('.', name), "<repo>", name)
+    replace_placeholder_in_file(
+        "{}/{}/deployment/manifests/api-ingress.yaml".format('.', name), "<repo>", name)
+    replace_placeholder_in_file(
+        "{}/{}/deployment/manifests/deployment.yml".format('.', name), "<repo>", name)
+    replace_placeholder_in_file(
+        "{}/{}/deployment/manifests/service.yml".format('.', name), "<repo>", name)
 
+    data = get_backend_client() \
+        .table("service") \
+        .insert({"name": name}) \
+        .execute()
 
+    print(data)
 
 
 @app.command('import')
@@ -123,7 +138,33 @@ def import_service():
 def list_services():
     typer.echo(f"List services")
 
+    services = get_backend_client() \
+        .table("service") \
+        .select("id, name, created, description") \
+        .execute()
+
+    print(tabulate(services[0]))
+
 
 @app.command('get')
 def list_services(service_id):
     typer.echo("Get service by {}".format(service_id))
+
+    service = get_backend_client() \
+        .table("service") \
+        .select("id, name, created, description") \
+        .eq("id", service_id) \
+        .execute()
+
+    print(service)
+
+
+@app.command('delete')
+def delete_service(service_id):
+    typer.echo("Delete service by {}".format(service_id))
+
+    service = get_backend_client() \
+        .table("service") \
+        .delete(service_id)
+
+    print(service)
