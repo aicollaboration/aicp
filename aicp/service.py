@@ -118,3 +118,12 @@ def import_service():
     kubernetes = search_kubernetes()
     print('✔' if kubernetes else '✘', 'kubernetes')
 
+
+@app.command('list')
+def list_services():
+    typer.echo(f"List services")
+
+
+@app.command('get')
+def list_services(service_id):
+    typer.echo("Get service by {}".format(service_id))
